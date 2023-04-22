@@ -22,3 +22,17 @@
 
 # clojure-lsp cache
 /.lsp/.cache
+
+# Ignore build dirs
+build
+target
+compiled
+
+# VIM temporary files
+*.sw?
+
+# Emacs temporary files
+*.#*
+
+*.egg-info
+__pycache__

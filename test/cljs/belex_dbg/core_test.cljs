@@ -1,6 +1,6 @@
-(ns belex-debug.core-test
+(ns belex-dbg.core-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [belex-debug.core :as core]))
+            [belex-dbg.core :as core]))
 
 (deftest fake-test
   (testing "fake description"

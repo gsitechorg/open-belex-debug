@@ -1,14 +1,14 @@
-(ns belex-debug.core
+(ns belex-dbg.core
   (:require
    [reagent.dom :as rdom]
    [re-frame.core :as re-frame]
-   [re-pressed.core :as rp]
    [breaking-point.core :as bp]
-   [belex-debug.events :as events]
-   [belex-debug.routes :as routes]
-   [belex-debug.views :as views]
-   [belex-debug.config :as config]
-   ))
+   [dommy.core :as dommy :refer-macros [sel1]]
+   [belex-dbg.config :as config]
+   [belex-dbg.adapters :as adapters]
+   [belex-dbg.events :as events]
+   [belex-dbg.sockets :as sockets]
+   [belex-dbg.views :as views]))
 
 
 (defn dev-setup []
@@ -17,22 +17,25 @@
 
 (defn ^:dev/after-load mount-root []
   (re-frame/clear-subscription-cache!)
-  (let [root-el (.getElementById js/document "app")]
+  (let [root-el (sel1 :#app)]
     (rdom/unmount-component-at-node root-el)
     (rdom/render [views/main-panel] root-el)))
 
 (defn init []
-  (routes/start!)
   (re-frame/dispatch-sync [::events/initialize-db])
-  (re-frame/dispatch-sync [::rp/add-keyboard-event-listener "keydown"])
   (re-frame/dispatch-sync [::bp/set-breakpoints
-                           {:breakpoints [:mobile
+                           {;; required
+                            :breakpoints [:mobile
                                           768
                                           :tablet
                                           992
                                           :small-monitor
                                           1200
-                                          :large-monitor]
-                            :debounce-ms 166}])
+                                          :large-monitor]}])
+  (sockets/subscribe-to-app-event adapters/handle-app-event)
+  (sockets/subscribe-to-file-load adapters/handle-file-load)
+  (re-frame/dispatch-sync [::events/start-socket])
   (dev-setup)
-  (mount-root))
+  (mount-root)
+  (re-frame/dispatch-sync [::events/open-terminal])
+  (re-frame/dispatch-sync [::events/await-app-event]))
