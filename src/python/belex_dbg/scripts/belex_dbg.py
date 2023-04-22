@@ -9,6 +9,7 @@ r"""
 
 import logging
 import logging.handlers
+import subprocess
 import sys
 from importlib.util import spec_from_file_location, module_from_spec
 from pathlib import Path
@@ -85,6 +86,10 @@ def belex_dbg(**kwargs) -> None:
                        port=port,
                        debug=debug,
                        use_reloader=False)
+
+    root_dir = Path(__file__).parent / "../../../.."
+    electron = root_dir / "node_modules" / ".bin" / "electron"
+    client = subprocess.Popen([electron, root_dir])
 
     debug_server.script_spec = \
         spec_from_file_location("belex_script", kwargs["belex_script"])

@@ -33,7 +33,11 @@
   8290 "target/browser-test"}
 
  :builds
- {:app
+ {:electron
+  {:target :node-script
+   :output-to "resources/compiled/main.js"
+   :main belex-dbg.electron/main}
+  :browser
   {:target     :browser
    :output-dir "resources/public/js/compiled"
    :asset-path "/js/compiled"
