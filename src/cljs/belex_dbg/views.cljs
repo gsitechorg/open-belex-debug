@@ -85,7 +85,8 @@
      (toggle-reg :rsp32k "RSP32K")
      (toggle-reg :vior "VIOR")
      (toggle-reg :fifo "FIFO")
-     (empty-toggle-cell 2)]]])
+     (toggle-reg :rwinh "RWINH")
+     (empty-toggle-cell 1)]]])
 
 (defn l1-toggle-cell [l1-addr]
   (let [toggle-id (str "l1-" l1-addr "-toggle")]
@@ -399,6 +400,52 @@
        (fifo-buffer-row)
        (fifo-rsp32k-row)]
       (fifo-rsp2k-rows))]]])
+
+(defn rwinh-panel []
+  (let [num-visible-plats @(re-frame/subscribe [::subs/num-visible-plats])
+        rwinh-filter @(re-frame/subscribe [::subs/rwinh-filter])
+        lower-plat @(re-frame/subscribe [::subs/h-scroll :rwinh-filter])
+        upper-plat (+ lower-plat num-visible-plats)]
+    [re-com/v-box
+     :src (at)
+     :gap "0em"
+     :class "table-view"
+     :children
+     [[:div.table-name.code
+       [:div "RWINH"]]
+      [:table.table.table-bordered.table-view.no-bottom-margin
+       (into
+        (conj
+         [:tbody
+          (into
+           [:tr [:th [:div.cell]]]
+           (for [plat (range lower-plat upper-plat)]
+             [:th
+              {:row-span 3}
+              [:div.cell.vertical-rl.dec-margin-top-1em
+               [:div.col-num plat]]]))]
+         [:tr [:th [:div.cell]]]
+         [:tr [:th [:div.cell]]])
+        (for [section (range belex/NUM_SECTIONS)]
+          (let [row (nth rwinh-filter section)]
+            (into
+             [:tr.text-end
+              [:th [:div.cell [:div.row-num section]]]]
+             (for [plat (range lower-plat upper-plat)]
+               [:td
+                {:class (if (nth row plat) "on" "off")}
+                [:div.cell]])))))]
+      [number-range
+       :value lower-plat
+       :max-value belex/NUM_PLATS_PER_APUC
+       :num-visible num-visible-plats
+       :width "50em"
+       :on-change #(re-frame/dispatch
+                    [::events/h-scroll
+                     :key :rwinh-filter
+                     :val %
+                     :max (- belex/NUM_PLATS_PER_APUC
+                             num-visible-plats)])]]]))
 
 (defn rl-panel []
   (let [num-visible-plats @(re-frame/subscribe [::subs/num-visible-plats])
@@ -1102,6 +1149,7 @@
          [:vmr vmr] [vmr-panel vmr]
          [:vior] [vior-panel]
          [:fifo] [fifo-panel]
+         [:rwinh] [rwinh-panel]
          :else (println "Unsupported active-panel params:" (vec params))))]))
 
 (defn apuc-panel

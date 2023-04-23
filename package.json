@@ -1,8 +1,8 @@
 {
 	"name": "belex-debug",
-  "version": "1.0.0",
-  "description": "Belex debugger",
-  "main": "resources/compiled/main.js",
+	"version": "1.0.0",
+	"description": "Belex debugger",
+	"main": "resources/compiled/main.js",
 	"scripts": {
 		"ancient": "clojure -Sdeps '{:deps {com.github.liquidz/antq {:mvn/version \"RELEASE\"}}}' -m antq.core",
 		"watch": "npx shadow-cljs watch electron browser",
@@ -10,6 +10,7 @@
 		"release": "npx shadow-cljs release electron browser"
 	},
 	"dependencies": {
+		"commander": "^10.0.1",
 		"electron": "^24.1.2",
 		"electron-builder": "^23.6.0",
 		"highlight.js": "11.1.0",

@@ -109,6 +109,11 @@
    (get-in db [:diri :apuc :vrs row-number])))
 
 (re-frame/reg-sub
+ ::rwinh-filter
+ (fn [db _]
+   (get-in db [:diri :apuc :rwinh-filter])))
+
+(re-frame/reg-sub
  ::rl
  (fn [db _]
    (get-in db [:diri :apuc :rl])))

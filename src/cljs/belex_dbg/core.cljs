@@ -21,6 +21,9 @@
     (rdom/unmount-component-at-node root-el)
     (rdom/render [views/main-panel] root-el)))
 
+(defn terminate []
+  (sockets/stop!))
+
 (defn init []
   (re-frame/dispatch-sync [::events/initialize-db])
   (re-frame/dispatch-sync [::bp/set-breakpoints
@@ -38,4 +41,5 @@
   (dev-setup)
   (mount-root)
   (re-frame/dispatch-sync [::events/open-terminal])
-  (re-frame/dispatch-sync [::events/await-app-event]))
+  (re-frame/dispatch-sync [::events/await-app-event])
+  (js/window.addEventListener "beforeunload" terminate))

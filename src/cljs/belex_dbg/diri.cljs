@@ -239,78 +239,87 @@
       (zip col-idxs patch))))
   ([array patch col-idxs num-cols row-idxs num-rows]
    (let [col-idxs (or col-idxs (range num-cols))
-         row-idxs (or row-idxs (range num-rows))
-         patch (cond
-                 (boolean? patch) (repeat
-                                   (count row-idxs)
-                                   (repeat (count col-idxs) patch))
-                 (boolean? (first patch)) (repeat
-                                           (count row-idxs) patch)
-                 :else patch)]
-     (reduce
-      (fn [array [row-idx row-patch]]
-        (as-> (nth array row-idx) row
-          (apply-patch row row-patch col-idxs num-cols)
-          (assoc array row-idx row)))
-      array
-      (zip row-idxs patch)))))
+         row-idxs (or row-idxs (range num-rows))]
+     (if (or (boolean? patch) (boolean? (first patch)))
+       (let [patch (if (boolean? patch)
+                     (repeat
+                      (count row-idxs)
+                      (repeat (count col-idxs) patch))
+                     (repeat
+                      (count row-idxs) patch))]
+         (reduce
+          (fn [array [row-idx row-patch]]
+            (as-> (nth array row-idx) row
+              (apply-patch row row-patch col-idxs num-cols)
+              (assoc array row-idx row)))
+          array
+          (zip row-idxs patch)))
+       (reduce
+        (fn [array [col-idx col-patch]]
+          (reduce
+           (fn [array [row-idx value]]
+             (assoc-in array [row-idx col-idx] value))
+           array
+           (zip row-idxs col-patch)))
+        array
+        (zip col-idxs patch))))))
 
 (defn patch-rwinh
   ([diri plats sections value]
    (update-in diri [:apuc :rwinh-filter]
-    #(apply-patch % value plats NUM_PLATS_PER_APUC sections NUM_SECTIONS))))
+    apply-patch value plats NUM_PLATS_PER_APUC sections NUM_SECTIONS)))
 
 (defn patch-vr
   ([diri row-number plats sections value]
    (update-in diri [:apuc :vrs row-number]
-    #(apply-patch % value plats NUM_PLATS_PER_APUC sections NUM_SECTIONS))))
+    apply-patch value plats NUM_PLATS_PER_APUC sections NUM_SECTIONS)))
 
 (defn patch-rl
   ([diri plats sections value]
    (update-in diri [:apuc :rl]
-    #(apply-patch % value plats NUM_PLATS_PER_APUC sections NUM_SECTIONS))))
+    apply-patch value plats NUM_PLATS_PER_APUC sections NUM_SECTIONS)))
 
 (defn patch-gl
   ([diri plats value]
    (update-in diri [:apuc :gl]
-    #(apply-patch % value plats NUM_PLATS_PER_APUC))))
+    apply-patch value plats NUM_PLATS_PER_APUC)))
 
 (defn patch-ggl
   ([diri plats groups value]
    (update-in diri [:apuc :ggl]
-    #(apply-patch % value plats NUM_PLATS_PER_APUC groups NUM_GROUPS))))
+    apply-patch value plats NUM_PLATS_PER_APUC groups NUM_GROUPS)))
 
 (defn patch-rsp16
   ([diri plats sections value]
    (update-in diri [:apuc :rsp16]
-    #(apply-patch % value plats NUM_RSP16_PLATS sections NUM_SECTIONS))))
+    apply-patch value plats NUM_RSP16_PLATS sections NUM_SECTIONS)))
 
 (defn patch-rsp256
   ([diri plats sections value]
    (update-in diri [:apuc :rsp256]
-    #(apply-patch % value plats NUM_RSP256_PLATS sections NUM_SECTIONS))))
+    apply-patch value plats NUM_RSP256_PLATS sections NUM_SECTIONS)))
 
 (defn patch-rsp2k
   ([diri plats sections value]
    (update-in diri [:apuc :rsp2k]
-    #(apply-patch % value plats NUM_RSP2K_PLATS sections NUM_SECTIONS))))
+    apply-patch value plats NUM_RSP2K_PLATS sections NUM_SECTIONS)))
 
 (defn patch-rsp32k
   ([diri plats sections value]
    (update-in diri [:apuc :rsp32k]
-    #(apply-patch % value plats NUM_RSP32K_PLATS sections NUM_SECTIONS))))
+    apply-patch value plats NUM_RSP32K_PLATS sections NUM_SECTIONS)))
 
 (defn patch-l1
   ([diri l1-addr plats sections value]
    (update-in diri [:apuc :l1 l1-addr]
-    #(apply-patch % value plats NUM_L1_PLATS sections NUM_L1_SECTIONS))))
+    apply-patch value plats NUM_L1_PLATS sections NUM_L1_SECTIONS)))
 
 (defn patch-l2
   ([diri l2-addr plats value]
    (update-in diri [:apuc :l2 l2-addr]
-    #(apply-patch % value plats NUM_L2_PLATS))))
+    apply-patch value plats NUM_L2_PLATS)))
 
 (defn patch-lgl
   ([diri plats value]
    (update-in diri [:apuc :lgl]
-    #(apply-patch % value plats NUM_LGL_PLATS))))
+    apply-patch value plats NUM_LGL_PLATS)))

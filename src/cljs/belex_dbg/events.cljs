@@ -120,16 +120,16 @@
  (fn;-traced
    [{:keys [db]
      {:keys [state event-buffer]
-      next-diri? :next-diri} :db}
+      next-diri :next-diri} :db}
     [_ event]]
    (cond-> {:db (assoc db
                        :event-buffer (conj event-buffer event)
                        :socket-state :ready)
             :fx []}
-     (and (not next-diri?) (diri-event? event))
-     (update :fx conj [:dispatch [::prepare-diri event]])
      (file-load-event? event)
      (update :fx conj [:dispatch [::prefetch-file event]])
+     (and (diri-event? event) (nil? next-diri))
+     (update :fx conj [:dispatch [::prepare-diri event]])
      (some #{state} [:waiting :playing])
      (update :fx conj [:dispatch [::handle-next-app-event]]))))
 
@@ -244,10 +244,11 @@
   [{:keys [db]
     {:keys [diri]} :db}
    [_ event]]
-  (let [db (dispatch-diri-event (assoc db :next-diri diri) event)]
+  (let [{:keys [state] :as db}
+        (dispatch-diri-event (assoc db :next-diri diri) event)]
     (cond-> {:db db
              :fx [[:dispatch [::next-app-event]]]}
-      (= (:state db) :terminated)
+      (= state :terminated)
       (update :fx conj [:dispatch [::stop-socket]])))))
 
 (re-frame/reg-event-db

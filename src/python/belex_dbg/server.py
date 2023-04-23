@@ -288,7 +288,7 @@ def handle_error(error):
     stop()
 
 
-def start(host_name: str = "0.0.0.0",
+def start(host: str = "0.0.0.0",
           port: int = 9803,
           debug: bool = True,
           use_reloader: bool = False) -> None:
@@ -297,7 +297,7 @@ def start(host_name: str = "0.0.0.0",
         LOGGER.debug("Initializing debug server.")
         server_proc = Thread(target=socketio.run,
                              args=[app],
-                             kwargs={"host": host_name,
+                             kwargs={"host": host,
                                      "port": port,
                                      "debug": debug,
                                      "use_reloader": use_reloader})

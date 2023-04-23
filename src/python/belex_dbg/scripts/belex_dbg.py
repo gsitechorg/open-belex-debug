@@ -36,7 +36,7 @@ SCRIPT_ARGS: Optional[Sequence[str]] = None
 @click.option("-p", "--port", "port",
               help="Specifies the port to launch the debug server",
               type=int, default=9803)
-@click.option("--host-name", "host_name", default="0.0.0.0",
+@click.option("--host", "host", default="0.0.0.0",
               help="Host name of the debug server (default: localhost)")
 @click.option("--config", "config",
               help="Specifies path to the BELEX config YAML file.",
@@ -54,6 +54,8 @@ SCRIPT_ARGS: Optional[Sequence[str]] = None
               default=True,
               help=("Capture stdout/stderr (default: True; disabling this "
                     "feature is intended for development only)."))
+@click.option("--gui/--no-gui", "open_window", default=True,
+              help="Whether to render the GUI.")
 @click.argument("belex_script")
 def belex_dbg(**kwargs) -> None:
     """Launches a debug session for a Belex application."""
@@ -72,7 +74,7 @@ def belex_dbg(**kwargs) -> None:
     # Only enable debug transformations
     optimizations = optimizations_by_level(0)
 
-    host_name = kwargs["host_name"]
+    host = kwargs["host"]
     port = kwargs["port"]
     debug = kwargs["debug"]
 
@@ -82,14 +84,20 @@ def belex_dbg(**kwargs) -> None:
         sys.argv += SCRIPT_ARGS
 
     signal(SIGINT, debug_server.stop)
-    debug_server.start(host_name=host_name,
+    debug_server.start(host=host,
                        port=port,
                        debug=debug,
                        use_reloader=False)
 
-    root_dir = Path(__file__).parent / "../../../.."
-    electron = root_dir / "node_modules" / ".bin" / "electron"
-    client = subprocess.Popen([electron, root_dir])
+    if kwargs["open_window"]:
+        root_dir = Path(__file__).parent / "../../../.."
+        electron = root_dir / "node_modules" / ".bin" / "electron"
+        client = subprocess.Popen([electron, root_dir,
+                                   "--host", host,
+                                   "--port", str(port)])
+    else:
+        print(f"Please open your browser to the following address: "
+              f"http://{kwargs['host']}:{kwargs['port']}")
 
     debug_server.script_spec = \
         spec_from_file_location("belex_script", kwargs["belex_script"])
