@@ -110,6 +110,11 @@ def belex_dbg(**kwargs) -> None:
     debug_server.start_app()
     # debug_server.join()
 
+    if kwargs["open_window"]:
+        return_code = client.wait()
+        LOGGER.debug("client exited with status: %d", return_code)
+        debug_server.stop()
+
 
 def main() -> None:
     global SCRIPT_ARGS

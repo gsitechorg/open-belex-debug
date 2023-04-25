@@ -128,6 +128,9 @@ def start_app() -> None:
         script_spec.loader.exec_module(script_module)
         emit_event(["app::stop"])
 
+        # TODO: Once we can restart the app, let the loop continue ...
+        break
+
 
 @socketio.on("restart")
 def handle_restart() -> None:
