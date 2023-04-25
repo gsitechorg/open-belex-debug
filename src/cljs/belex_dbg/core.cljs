@@ -41,5 +41,5 @@
   (dev-setup)
   (mount-root)
   (re-frame/dispatch-sync [::events/open-terminal])
-  (re-frame/dispatch-sync [::events/await-app-event])
+  (re-frame/dispatch-sync [::events/poll-app-event])
   (js/window.addEventListener "beforeunload" terminate))

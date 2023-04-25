@@ -10,13 +10,13 @@
    :diri default-diri
    :next-diri nil
    :files {}
-   :loading-files []
+   :loading-files #{}
    :num-visible-plats config/num-visible-plats
    :toggle-active? {}
    :active-toggles []
    :terminal (js/Terminal. #js {:convertEol true})
-   :prev-state :paused
-   :state :waiting
+   :prev-state nil
+   :state :paused
    :event-buffer #queue []
    :socket-state :ready
    :in-instruction? false})

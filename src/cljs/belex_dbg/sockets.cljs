@@ -14,12 +14,11 @@
 (defn subscribe-to-file-load [handler]
   (.subscribe file-loads #js {:next handler}))
 
-(defn await-app-event []
+(defn poll-app-event []
   (when @socket
-    (.emit @socket "await_app_event")))
+    (.emit @socket "poll_app_event")))
 
 (defn restart-app []
-  (println "socket? =" @socket)
   (when @socket
     (.emit @socket "restart")))
 

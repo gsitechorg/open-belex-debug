@@ -1,7 +1,7 @@
 (ns belex-dbg.events
   (:require
    [re-frame.core :as re-frame]
-   [day8.re-frame.tracing :refer-macros [fn-traced]]
+   ;; [day8.re-frame.tracing :refer-macros [fn;-traced]]
    [dommy.core :as dommy :refer-macros [sel1]]
    [belex-dbg.config :as config]
    [belex-dbg.db :as db]
@@ -10,7 +10,7 @@
 
 (re-frame/reg-event-db
  ::initialize-db
- (fn-traced
+ (fn;-traced
   [_ _]
   db/default-db))
 
@@ -21,7 +21,7 @@
 
 (re-frame/reg-event-fx
  ::start-socket
- (fn-traced
+ (fn;-traced
   [_ _]
   {:fx [[::start-socket-fx]]}))
 
@@ -30,40 +30,46 @@
  (fn []
    (sockets/stop!)))
 
+
 (re-frame/reg-event-fx
  ::stop-socket
- (fn-traced
+ (fn;-traced
   [_ _]
   {:fx [[::stop-socket-fx]]}))
 
+(defn apuc-event? [[event-nym]]
+  (.startsWith event-nym "diri::"))
+
+(defn seu-event? [[event-nym]]
+  (.startsWith event-nym "seu::"))
+
+(defn fifo-event? [[event-nym]]
+  (.startsWith event-nym "fifo::"))
+
+(defn diri-event? [[event-nym]]
+  (or
+   (.startsWith event-nym "seu::")
+   (.startsWith event-nym "fifo::")
+   (.startsWith event-nym "diri::")))
+
+(defn file-load-event? [[event-nym]]
+  (.endsWith event-nym "::enter"))
+
 (re-frame/reg-fx
- ::await-app-event-fx
+ ::poll-app-event-fx
  (fn []
-   (sockets/await-app-event)))
+   (sockets/poll-app-event)))
 
 (re-frame/reg-event-fx
- ::await-app-event
- (fn-traced
+ ::poll-app-event
+ (fn;-traced
    [{:keys [db]
      {:keys [event-buffer socket-state]} :db} _]
    (when (and
           (< (count event-buffer) config/event-buffer-capacity)
           (= socket-state :ready))
      {:db (assoc db :socket-state :pending)
-      :fx [[::await-app-event-fx]]})))
-
-(re-frame/reg-event-fx
- ::next-app-event
- (fn-traced
-   [{:keys [db]
-     {:keys [state event-buffer]} :db}]
-   (cond-> {:db db :fx []}
-     (not-any? #{state} [:waiting :terminated])
-     (update :db assoc :state :waiting :prev-state state)
-     (seq event-buffer)
-     (update :fx conj [:dispatch [::handle-next-app-event]])
-     (< (count event-buffer) config/event-buffer-capacity)
-     (update :fx conj [:dispatch [::await-app-event]]))))
+      :fx [[::poll-app-event-fx]]})))
 
 (defmulti app-event-handler first)
 
@@ -95,62 +101,55 @@
   [::update-diri event])
 
 (re-frame/reg-event-fx
- ::handle-next-app-event
- (fn-traced
-   [{:keys [db]
-     {:keys [event-buffer state prev-state in-instruction?]} :db}
-    _]
-   (when (and (not= state :terminated) (seq event-buffer))
-     (cond-> {:db (assoc db :event-buffer (pop event-buffer))
-              :fx [[:dispatch (app-event-handler (peek event-buffer))]]}
-       (= state :waiting)
-       (update :db assoc :state prev-state :prev-state nil)
-       (not in-instruction?)
-       (update :fx conj [:dispatch [::await-app-event]])
-       (and (not in-instruction?)
-            (not= state :waiting))
-       (update :db assoc :state :waiting :prev-state state)))))
-
-(defn diri-event? [[event-nym]]
-  (or
-   (.startsWith event-nym "seu::")
-   (.startsWith event-nym "fifo::")
-   (.startsWith event-nym "diri::")))
-
-(defn file-load-event? [[event-nym]]
-  (.endsWith event-nym "::enter"))
+ ::pop-app-event
+ (fn;-traced
+  [{:keys [db]
+    {:keys [event-buffer state prev-state]} :db}
+   _]
+  (when-let [event (peek event-buffer)]
+    (cond-> {:db (assoc db :event-buffer (pop event-buffer))
+             :fx [[:dispatch (app-event-handler event)]]}
+      (some #{state} [:waiting :stepping-over])
+      (update :db assoc :state prev-state :prev-state nil)
+      (or (seu-event? event)
+          (fifo-event? event)
+          (some #{:playing} [state prev-state]))
+      (update :fx conj [:dispatch [::handle-app-event]])))))
 
 (re-frame/reg-event-fx
- ::buffer-app-event
- (fn-traced
+ ::handle-app-event
+ (fn;-traced
   [{:keys [db]
-    {:keys [state prev-state event-buffer next-diri in-instruction?]} :db}
-   [_ event]]
-  (cond-> {:db (assoc db
-                      :event-buffer (conj event-buffer event)
-                      :socket-state :ready)
-           :fx []}
-    (= state :waiting)
-    (update :db assoc :state prev-state :prev-state nil)
-    (file-load-event? event)
-    (update :fx conj [:dispatch [::prefetch-file event]])
-    (and (= state :paused)
-         (file-load-event? event)
-         (not in-instruction?))
-    (update :fx conj [:dispatch [::handle-next-app-event]])
-    (and (diri-event? event)
-         (nil? next-diri))
-    (update :fx conj [:dispatch [::prepare-diri event]])
-    (and (= state :waiting)
-         (not (diri-event? event)))
-    (update :fx conj [:dispatch [::handle-next-app-event]])
-    (or
-     (and (some #{state} [:paused :waiting])
-          (diri-event? event)
-          (not in-instruction?))
-     (and (= state :playing)
-          (diri-event? event)))
-    (update :fx conj [:dispatch [::next-app-event]]))))
+    {:keys [event-buffer state prev-state next-diri in-instruction?]} :db}
+   _]
+  (when-let [event (peek event-buffer)]
+    (cond-> {:db db :fx []}
+      (file-load-event? event)
+      (update :fx conj [:dispatch [::prefetch-file event]])
+      (and (diri-event? event)
+           (nil? next-diri))
+      (update :fx conj [:dispatch [::prepare-diri event]])
+      (or (not (apuc-event? event))
+          (not in-instruction?)
+          (some #{:playing :stepping-over} [state prev-state]))
+      (update :fx conj [:dispatch [::pop-app-event]])))))
+
+(re-frame/reg-event-fx
+ ::push-app-event
+ (fn;-traced
+   [{:keys [db]
+     {:keys [event-buffer]} :db}
+    [_ event]]
+   (cond-> {:db (assoc db
+                       :event-buffer (conj event-buffer event)
+                       :socket-state :ready)
+            :fx []}
+     (file-load-event? event)
+     (update :fx conj [:dispatch [::prefetch-file event]])
+     true
+     (update :fx conj
+             [:dispatch [::handle-app-event]]
+             [:dispatch [::poll-app-event]]))))
 
 (re-frame/reg-fx
  ::open-terminal-fx
@@ -160,7 +159,7 @@
 
 (re-frame/reg-event-fx
  ::open-terminal
- (fn-traced
+ (fn;-traced
   [{{:keys [terminal]} :db} _]
   {::open-terminal-fx terminal}))
 
@@ -171,14 +170,13 @@
 
 (re-frame/reg-event-fx
  ::write-line
- (fn-traced
+ (fn;-traced
    [{{:keys [terminal]} :db} [_ line]]
-   {:fx [[::write-line-fx [terminal line]]
-         [:dispatch [::next-app-event]]]}))
+   {:fx [[::write-line-fx [terminal line]]]}))
 
 (re-frame/reg-event-fx
   ::navigate
-  (fn-traced
+  (fn;-traced
    [_ [_ handler]]
    {:navigate handler}))
 
@@ -259,24 +257,27 @@
 
 (re-frame/reg-event-fx
  ::prepare-diri
- (fn-traced
+ (fn;-traced
   [{:keys [db]
     {:keys [diri]} :db}
    [_ event]]
   (let [{:keys [state] :as db}
         (dispatch-diri-event (assoc db :next-diri diri) event)]
-    (cond-> {:db db
-             :fx [#_FIXME #_[:dispatch [::next-app-event]]]}
+    (cond-> {:db db :fx []}
       (= state :terminated)
       (update :fx conj [:dispatch [::stop-socket]])))))
 
 (re-frame/reg-event-db
  ::update-diri
- (fn-traced
-   [{:keys [next-diri] :as db} _]
-   (assoc db :diri next-diri
-          :next-diri nil
-          :in-instruction? false)))
+ (fn;-traced
+  [{:keys [next-diri]
+    :as db}
+   _]
+  (cond-> db
+    next-diri
+    (assoc :diri next-diri
+           :next-diri nil
+           :in-instruction? false))))
 
 (re-frame/reg-fx
  ::load-file-fx
@@ -315,7 +316,7 @@
 
 (re-frame/reg-event-fx
  ::highlight-line
- (fn-traced
+ (fn;-traced
   [{{:keys [preview-line]} :db} [_ file-line]]
   (when (or file-line preview-line)
     {::highlight-line-fx (or file-line preview-line)})))
@@ -324,64 +325,58 @@
  ::load-file
  (fn;;-traced
    [{:keys [db]
-     {:keys [state prev-state loading-files files]} :db}
+     {:keys [files loading-files]
+      loading-file? :loading-files} :db}
     [_ file-path line-number]]
-   (let [file-html (files file-path)]
-     (cond
-       ;; Case 1: file has already been loaded
-       file-html
-       (cond-> {:db (assoc db :preview-path file-path
-                           :preview-line line-number
-                           :preview-doc file-html
-                           :in-instruction? true)
-                :fx [[::highlight-line-fx line-number]]}
-         (or (= state :playing) (= prev-state :playing))
-         (update :fx conj [:dispatch [::next-app-event]])
-         (= state :paused)
-         (->
-          (update :db assoc :state :waiting :prev-state state)
-          (update :fx conj [:dispatch [::await-app-event]])))
-
-       ;; Case 2: file is being loaded
-       (some #{file-path} loading-files)
-       {:db (assoc db :preview-path file-path
-                   :preview-line line-number
-                   :in-instruction? true)}
-       ;; Case 3: file needs to be loaded
-       :else
-       {:db (assoc db :preview-path file-path
-                   :preview-line line-number
-                   :loading-files (conj loading-files file-path)
-                   :in-instruction? true)
-        ::load-file-fx file-path}))))
+   (cond
+     ;; Case 1: file has already been loaded
+     (contains? files file-path)
+     (cond-> {:db (assoc db :preview-path file-path
+                         :preview-line line-number
+                         :preview-doc (files file-path)
+                         :in-instruction? true)
+              :fx [[::highlight-line-fx line-number]]})
+     ;; Case 2: file is being loaded
+     (loading-file? file-path)
+     {:db (assoc db :preview-path file-path
+                 :preview-line line-number
+                 :in-instruction? true)}
+     ;; Case 3: file needs to be loaded
+     :else
+     {:db (assoc db :preview-path file-path
+                 :preview-line line-number
+                 :loading-files (conj loading-files file-path)
+                 :in-instruction? true)
+      :fx [[::load-file-fx file-path]]})))
 
 (re-frame/reg-event-fx
  ::prefetch-file
  (fn;;-traced
    [{:keys [db]
-     {:keys [loading-files files]} :db}
+     {:keys [loading-files files]
+      loading-file? :loading-files} :db}
     [_ [_ [file-path]]]]
-   (when (and (not (files file-path))
-              (not-any? #{file-path} loading-files))
+   (when (and (not (contains? files file-path))
+              (not (loading-file? file-path)))
      {:db (assoc db :loading-files (conj loading-files file-path))
       :fx [[::load-file-fx file-path]]})))
 
 (re-frame/reg-event-fx
  ::store-file
- (fn-traced
+ (fn;-traced
   [{:keys [db]
     {:keys [preview-path preview-line]} :db}
    [_ file-path file-html]]
   (cond-> {:db (-> db
                    (assoc-in [:files file-path] file-html)
-                   (update :loading-files #(remove #{file-path} %)))}
+                   (update :loading-files disj file-path))}
     (= file-path preview-path)
     (merge
      {:fx [[:dispatch [::load-file file-path preview-line]]]}))))
 
 (re-frame/reg-event-db
  ::toggle-active
- (fn-traced
+ (fn;-traced
   [db [_ toggle-id & params]]
   (let [active? (not (get-in db [:toggle-active? toggle-id]))]
     (-> db
@@ -403,13 +398,13 @@
 
 (re-frame/reg-event-db
  ::h-scroll
- (fn-traced
+ (fn;-traced
   [db [_ & {:keys [key val max]}]]
   (assoc-in db [:h-scroll key] (clamp val max))))
 
 (re-frame/reg-event-db
  ::set-fifo-idx
- (fn-traced
+ (fn;-traced
   [db [_ apc-id fifo-idx]]
   (assoc-in db [:fifo-idx apc-id] fifo-idx)))
 
@@ -426,7 +421,7 @@
 
 (re-frame/reg-event-fx
  ::copy-to-clipboard
- (fn-traced
+ (fn;-traced
   [_ [_ value]]
   {::copy-to-clipboard-fx value}))
 
@@ -434,12 +429,13 @@
   {:playing :paused
    :waiting :waiting
    :paused :playing
+   :stepping-over :playing
    :terminated :terminated
    :stopped :stopped})
 
 (re-frame/reg-event-fx
  ::toggle-state
- (fn-traced
+ (fn;-traced
    [{:keys [db] {:keys [state]} :db} _]
    (cond-> {:db db :fx []}
      (not= state :waiting)
@@ -447,16 +443,17 @@
      (= state :waiting)
      (update-in [:db :prev-state] toggle-state)
      (= state :paused)
-     (update :fx conj
-             [:dispatch
-              [::next-app-event]]))))
+     (update :fx conj [:dispatch [::handle-app-event]]))))
 
 (re-frame/reg-event-fx
  ::step-over-instr
- (fn-traced
-  [{{:keys [state]} :db} _]
+ (fn;-traced
+  [{:keys [db]
+    {:keys [state]} :db}
+   _]
   (when (= state :paused)
-    {:fx [[:dispatch [::next-app-event]]]})))
+    {:db (assoc db :state :stepping-over :prev-state state)
+     :fx [[:dispatch [::handle-app-event]]]})))
 
 (re-frame/reg-fx
  ::restart-app-fx
@@ -465,7 +462,7 @@
 
 (re-frame/reg-event-fx
  ::restart-app
- (fn-traced
+ (fn;-traced
   [_ _]
   {:fx [[::restart-app-fx]]}))
 

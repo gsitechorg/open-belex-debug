@@ -1424,7 +1424,8 @@
 
 (def ^:const toggle-state-icon
   {:playing "bi-pause"
-   :paused "bi-play"})
+   :paused "bi-play"
+   :stepping-over "bi-play"})
 
 (defn toggle-state-btn []
   (let [state @(re-frame/subscribe [::subs/state])

@@ -210,8 +210,8 @@ in_multi_statement = False
 in_statement = False
 
 
-@socketio.on("await_app_event")
-def handle_await_app_event() -> None:
+@socketio.on("poll_app_event")
+def handle_poll_app_event() -> None:
     global in_multi_statement
     global in_statement
 
