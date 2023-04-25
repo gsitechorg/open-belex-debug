@@ -206,11 +206,16 @@ def emit_app_event(event_json: Sequence[Any]) -> None:
     emit_json("app_event", event_json)
 
 
+in_multi_statement = False
+in_statement = False
+
+
 @socketio.on("await_app_event")
 def handle_await_app_event() -> None:
+    global in_multi_statement
+    global in_statement
+
     batch = []
-    in_multi_statement = False
-    in_statement = False
     done = False
 
     while alive and not done:
@@ -254,12 +259,11 @@ def handle_await_app_event() -> None:
                 emit_app_event(("diri::batch", batch))
                 batch.clear()
                 done = True
-        elif len(event[0]) >= 6 \
-             and (event[0].startswith("seu::")
-                  or event[0] in ["stdout", "stderr"]):
+        elif (event[0].startswith("seu::")
+              or event[0] in ["stdout", "stderr"]):
             emit_app_event(jsonify_event(event))
             done = True
-        elif not in_statement:
+        elif not (in_multi_statement or in_statement):
             emit_app_event(jsonify_event(event))
             done = True
         else:

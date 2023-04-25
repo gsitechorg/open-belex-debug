@@ -18,4 +18,5 @@
    :prev-state :paused
    :state :waiting
    :event-buffer #queue []
-   :socket-state :ready})
+   :socket-state :ready
+   :in-instruction? false})

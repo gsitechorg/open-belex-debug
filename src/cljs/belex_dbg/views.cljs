@@ -903,6 +903,11 @@
                      :max (- belex/NUM_L2_PLATS
                              num-visible-plats)])]]]))
 
+;; Involution between VR and VMR sections.
+;; VMR sections are interleaves of the corresponding VR sections of size 4.
+(def ^:const vr<->vmr
+  [0 4 8 12 1 5 9 13 2 6 10 14 3 7 11 15])
+
 (defn vmr-panel [vmr]
   (let [num-visible-plats @(re-frame/subscribe [::subs/num-visible-plats])
         {:keys [l1-addr parity-addr parity-grp]} (belex/vmr->set-ext vmr)
@@ -940,7 +945,7 @@
          [:tr [:th [:div.cell]]]
          [:tr [:th [:div.cell]]])
         (for [section (range belex/NUM_SECTIONS)]
-          (let [row (nth vr section)]
+          (let [row (nth vr (vr<->vmr section))]
             (into
              [:tr.text-end
               [:th [:div.cell [:div.row-num section]]]]
@@ -1102,7 +1107,7 @@
                [:div.col-num plat]]]))]
          [:tr [:th [:div.cell]]]
          [:tr [:th [:div.cell]]])
-        (for [section (range belex/NUM_SECTIONS)]
+        (for [section (map vr<->vmr (range belex/NUM_SECTIONS))]
           (into
            [:tr.text-end
             [:th [:div.cell [:div.row-num section]]]]
