@@ -917,7 +917,7 @@
         l1_3 @(re-frame/subscribe [::subs/l1 (+ l1-addr 3)])
         l1_parity @(re-frame/subscribe [::subs/l1 parity-addr])
         vr (vec (concat l1_0 l1_1 l1_2 l1_3))
-        lower-parity-sec (* 2 parity-grp)
+        lower-parity-sec parity-grp
         upper-parity-sec (+ 2 lower-parity-sec)
         lower-parity-plat @(re-frame/subscribe
                             [::subs/h-scroll [:vmr-parity vmr]])
@@ -979,7 +979,7 @@
                [:div.col-num plat]]]))]
          [:tr [:th [:div.cell]]]
          [:tr [:th [:div.cell]]])
-        (for [section (range lower-parity-sec upper-parity-sec)]
+        (for [section [lower-parity-sec upper-parity-sec]]
           (let [row (nth l1_parity section)]
             (into
              [:tr.text-end
@@ -1424,8 +1424,7 @@
 
 (def ^:const toggle-state-icon
   {:playing "bi-pause"
-   :paused "bi-play"
-   :stepping-over "bi-play"})
+   :paused "bi-play"})
 
 (defn toggle-state-btn []
   (let [state @(re-frame/subscribe [::subs/state])
@@ -1439,25 +1438,26 @@
      :disabled? (= state :terminated)]))
 
 (defn step-over-btn []
-  (let [state @(re-frame/subscribe [::subs/state])
-        loading-files? @(re-frame/subscribe [::subs/loading-files?])]
+  (let [terminated? @(re-frame/subscribe [::subs/terminated?])
+        waiting? @(re-frame/subscribe [::subs/waiting?])]
     [tooltip-btn
      :btn-id "step-over-btn"
      :icon-class "bi-arrow-90deg-right"
      :tooltip-text "Step over intstruction"
      :on-click #(re-frame/dispatch [::events/step-over-instr])
-     :disabled? (= state :terminated)
-     :waiting? (or (= state :waiting) loading-files?)]))
+     :disabled? terminated?
+     :waiting? waiting?]))
 
 (defn restart-btn []
-  (let [state @(re-frame/subscribe [::subs/state])]
+  (let [stopped? @(re-frame/subscribe [::subs/stopped?])
+        terminated? @(re-frame/subscribe [::subs/terminated?])]
     [tooltip-btn
      :btn-id "restart-btn"
      :icon-class "bi-arrow-counterclockwise"
      :tooltip-text "Restart executation"
      :on-click #(re-frame/dispatch [::events/restart-app])
-     :disabled? (not= state :stopped)
-     :waiting? (not-any? #{state} [:stopped :terminated])]))
+     :disabled? (not stopped?)
+     :waiting? (not (or stopped? terminated?))]))
 
 (defn control-panel []
   [re-com/h-box

@@ -4,12 +4,17 @@
    [re-frame.core :as re-frame]
    [breaking-point.core :as bp]
    [dommy.core :as dommy :refer-macros [sel1]]
+   ;; NOTE: Uncomment the highlight.js imports when using re-frame-10x
+   ["highlight.js/lib/core" :as hljs]
+   ["highlight.js/lib/languages/clojure" :as hl-clojure]
    [belex-dbg.config :as config]
    [belex-dbg.adapters :as adapters]
    [belex-dbg.events :as events]
    [belex-dbg.sockets :as sockets]
    [belex-dbg.views :as views]))
 
+;; NOTE: Uncomment the highlight.js imports when using re-frame-10x
+(hljs/registerLanguage "clojure" hl-clojure)
 
 (defn dev-setup []
   (when config/debug?

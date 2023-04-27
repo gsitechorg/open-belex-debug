@@ -8,6 +8,11 @@
    [belex-dbg.diri :as belex]
    [belex-dbg.sockets :as sockets]))
 
+;; NOTE: Event handlers defined as `fn;-traced` are available for use with
+;; re-frame-10x. To use them, rename `fn;-traced` as `fn;-traced`.
+;; NOTE: Event handlers defined as `fn;;-traced` are handlers that break
+;; re-frame-10x.
+
 (re-frame/reg-event-db
  ::initialize-db
  (fn;-traced
@@ -30,7 +35,6 @@
  (fn []
    (sockets/stop!)))
 
-
 (re-frame/reg-event-fx
  ::stop-socket
  (fn;-traced
@@ -51,6 +55,9 @@
    (.startsWith event-nym "seu::")
    (.startsWith event-nym "fifo::")
    (.startsWith event-nym "diri::")))
+
+(defn instr-event? [[event-nym]]
+  (= event-nym "diri::batch"))
 
 (defn file-load-event? [[event-nym]]
   (.endsWith event-nym "::enter"))
@@ -109,18 +116,20 @@
   (when-let [event (peek event-buffer)]
     (cond-> {:db (assoc db :event-buffer (pop event-buffer))
              :fx [[:dispatch (app-event-handler event)]]}
-      (some #{state} [:waiting :stepping-over])
+      (and (file-load-event? event)
+           (some #{state} [:waiting :stepping-over]))
       (update :db assoc :state prev-state :prev-state nil)
-      (or (seu-event? event)
-          (fifo-event? event)
+      (or (not (file-load-event? event))
           (some #{:playing} [state prev-state]))
-      (update :fx conj [:dispatch [::handle-app-event]])))))
+      (update :fx conj [:dispatch [::handle-app-event]])
+      :true
+      (update :fx conj [:dispatch [::poll-app-event]])))))
 
 (re-frame/reg-event-fx
  ::handle-app-event
  (fn;-traced
   [{:keys [db]
-    {:keys [event-buffer state prev-state next-diri in-instruction?]} :db}
+    {:keys [event-buffer state prev-state next-diri]} :db}
    _]
   (when-let [event (peek event-buffer)]
     (cond-> {:db db :fx []}
@@ -129,8 +138,7 @@
       (and (diri-event? event)
            (nil? next-diri))
       (update :fx conj [:dispatch [::prepare-diri event]])
-      (or (not (apuc-event? event))
-          (not in-instruction?)
+      (or (not (instr-event? event))
           (some #{:playing :stepping-over} [state prev-state]))
       (update :fx conj [:dispatch [::pop-app-event]])))))
 
@@ -185,67 +193,67 @@
     (first event)))
 
 (defmethod dispatch-diri-event "seu::sm_reg" [db [_ reg-id value]]
-  (update db :next-diri #(belex/set-sm-reg % reg-id value)))
+  (update db :next-diri belex/set-sm-reg reg-id value))
 
 (defmethod dispatch-diri-event "seu::rn_reg" [db [_ reg-id value]]
-  (update db :next-diri #(belex/set-rn-reg % reg-id value)))
+  (update db :next-diri belex/set-rn-reg reg-id value))
 
 (defmethod dispatch-diri-event "seu::re_reg" [db [_ reg-id value]]
-  (update db :next-diri #(belex/set-re-reg % reg-id value)))
+  (update db :next-diri belex/set-re-reg reg-id value))
 
 (defmethod dispatch-diri-event "seu::ewe_reg" [db [_ reg-id value]]
-  (update db :next-diri #(belex/set-ewe-reg % reg-id value)))
+  (update db :next-diri belex/set-ewe-reg reg-id value))
 
 (defmethod dispatch-diri-event "seu::l1_addr_reg" [db [_ reg-id value]]
-  (update db :next-diri #(belex/set-l1-reg % reg-id value)))
+  (update db :next-diri belex/set-l1-reg reg-id value))
 
 (defmethod dispatch-diri-event "seu::l2_addr_reg" [db [_ reg-id value]]
-  (update db :next-diri #(belex/set-l2-reg % reg-id value)))
+  (update db :next-diri belex/set-l2-reg reg-id value))
 
 (defmethod dispatch-diri-event "fifo::enqueue" [db [_ apc-id [rsp32k rsp2k] _]]
   (let [rsp-fifo-msg (belex/->rsp-fifo-msg rsp32k rsp2k)]
-    (update db :next-diri #(belex/fifo->enqueue % apc-id rsp-fifo-msg))))
+    (update db :next-diri belex/fifo->enqueue apc-id rsp-fifo-msg)))
 
 (defmethod dispatch-diri-event "fifo::dequeue" [db [_ apc-id _]]
-  (update db :next-diri #(belex/fifo->dequeue % apc-id)))
+  (update db :next-diri belex/fifo->dequeue apc-id))
 
 (defmethod dispatch-diri-event "diri::rw_inh_filter"
   [db [_ plats sections value]]
-  (update db :next-diri #(belex/patch-rwinh % plats sections value)))
+  (update db :next-diri belex/patch-rwinh plats sections value))
 
 (defmethod dispatch-diri-event "diri::vr"
   [db [_ row-number plats sections value]]
-  (update db :next-diri #(belex/patch-vr % row-number plats sections value)))
+  (update db :next-diri belex/patch-vr row-number plats sections value))
 
 (defmethod dispatch-diri-event "diri::rl" [db [_ plats sections value]]
-  (update db :next-diri #(belex/patch-rl % plats sections value)))
+  (update db :next-diri belex/patch-rl plats sections value))
 
 (defmethod dispatch-diri-event "diri::gl" [db [_ plats value]]
-  (update db :next-diri #(belex/patch-gl % plats value)))
+  (update db :next-diri belex/patch-gl plats value))
 
 (defmethod dispatch-diri-event "diri::ggl" [db [_ plats groups value]]
-  (update db :next-diri #(belex/patch-ggl % plats groups value)))
+  (update db :next-diri belex/patch-ggl plats groups value))
 
 (defmethod dispatch-diri-event "diri::rsp16" [db [_ plats sections value]]
-  (update db :next-diri #(belex/patch-rsp16 % plats sections value)))
+  (update db :next-diri belex/patch-rsp16 plats sections value))
 
 (defmethod dispatch-diri-event "diri::rsp256" [db [_ plats sections value]]
-  (update db :next-diri #(belex/patch-rsp256 % plats sections value)))
+  (update db :next-diri belex/patch-rsp256 plats sections value))
 
 (defmethod dispatch-diri-event "diri::rsp2k" [db [_ plats sections value]]
-  (update db :next-diri #(belex/patch-rsp2k % plats sections value)))
+  (update db :next-diri belex/patch-rsp2k plats sections value))
 
 (defmethod dispatch-diri-event "diri::rsp32k" [db [_ plats sections value]]
-  (update db :next-diri #(belex/patch-rsp32k % plats sections value)))
+  (update db :next-diri belex/patch-rsp32k plats sections value))
 
 (defmethod dispatch-diri-event "diri::l1" [db [_ l1-addr plats sections value]]
-  (update db :next-diri #(belex/patch-l1 % l1-addr plats sections value)))
+  (update db :next-diri belex/patch-l1 l1-addr plats sections value))
 
 (defmethod dispatch-diri-event "diri::l2" [db [_ l2-addr plats value]]
-  (update db :next-diri #(belex/patch-l2 % l2-addr plats value)))
+  (update db :next-diri belex/patch-l2 l2-addr plats value))
 
 (defmethod dispatch-diri-event "diri::lgl" [db [_ plats value]]
-  (update db :next-diri #(belex/patch-lgl % plats value)))
+  (update db :next-diri belex/patch-lgl plats value))
 
 (defmethod dispatch-diri-event "diri::batch" [db [_ batch]]
   (reduce dispatch-diri-event db batch))
@@ -267,17 +275,33 @@
       (= state :terminated)
       (update :fx conj [:dispatch [::stop-socket]])))))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
+ ::prepare-next-diri
+ (fn;;-traced
+   [{:keys [db]
+     {:keys [event-buffer next-diri]} :db}
+    _]
+   (when (and (nil? next-diri) (seq event-buffer))
+     (loop [event (peek event-buffer)
+            event-buffer (pop event-buffer)]
+       (cond
+         (diri-event? event)
+         {:fx [[:dispatch [::prepare-diri event]]]}
+         (seq event-buffer)
+         (recur
+          (peek event-buffer)
+          (pop event-buffer))
+         :else nil)))))
+
+(re-frame/reg-event-fx
  ::update-diri
  (fn;-traced
-  [{:keys [next-diri]
-    :as db}
+  [{:keys [db]
+    {:keys [next-diri]} :db}
    _]
-  (cond-> db
-    next-diri
-    (assoc :diri next-diri
-           :next-diri nil
-           :in-instruction? false))))
+  (when next-diri
+    {:db (assoc db :diri next-diri :next-diri nil)
+     :fx [[:dispatch [::prepare-next-diri]]]})))
 
 (re-frame/reg-fx
  ::load-file-fx
@@ -333,20 +357,17 @@
      (contains? files file-path)
      (cond-> {:db (assoc db :preview-path file-path
                          :preview-line line-number
-                         :preview-doc (files file-path)
-                         :in-instruction? true)
+                         :preview-doc (files file-path))
               :fx [[::highlight-line-fx line-number]]})
      ;; Case 2: file is being loaded
      (loading-file? file-path)
      {:db (assoc db :preview-path file-path
-                 :preview-line line-number
-                 :in-instruction? true)}
+                 :preview-line line-number)}
      ;; Case 3: file needs to be loaded
      :else
      {:db (assoc db :preview-path file-path
                  :preview-line line-number
-                 :loading-files (conj loading-files file-path)
-                 :in-instruction? true)
+                 :loading-files (conj loading-files file-path))
       :fx [[::load-file-fx file-path]]})))
 
 (re-frame/reg-event-fx
@@ -427,32 +448,45 @@
 
 (def ^:const toggle-state
   {:playing :paused
-   :waiting :waiting
    :paused :playing
-   :stepping-over :playing
    :terminated :terminated
    :stopped :stopped})
 
 (re-frame/reg-event-fx
  ::toggle-state
  (fn;-traced
-   [{:keys [db] {:keys [state]} :db} _]
-   (cond-> {:db db :fx []}
-     (not= state :waiting)
-     (update-in [:db :state] toggle-state)
-     (= state :waiting)
-     (update-in [:db :prev-state] toggle-state)
-     (= state :paused)
-     (update :fx conj [:dispatch [::handle-app-event]]))))
+  [{:keys [db]
+    {:keys [state]
+     {timestamp-ms :toggle-state} :timestamp-ms
+     {debounce-ms :toggle-state
+      :or {debounce-ms 200}} :debounce-ms} :db}
+   _]
+  (when (or (nil? timestamp-ms)
+            (> (- (js/Date.now) timestamp-ms) debounce-ms))
+    (cond-> {:db (assoc-in db [:timestamp-ms :toggle-state] (js/Date.now))
+             :fx []}
+      (not-any? #{state} [:waiting :stepping-over])
+      (update-in [:db :state] toggle-state)
+      (some #{state} [:waiting :stepping-over])
+      (update-in [:db :prev-state] toggle-state)
+      (= state :paused)
+      (update :fx conj [:dispatch [::handle-app-event]])))))
 
 (re-frame/reg-event-fx
  ::step-over-instr
  (fn;-traced
   [{:keys [db]
-    {:keys [state]} :db}
+    {:keys [state]
+     {timestamp-ms :step-over-instr} :timestamp-ms
+     {debounce-ms :step-over-instr
+      :or {debounce-ms 200}} :debounce-ms} :db}
    _]
-  (when (= state :paused)
-    {:db (assoc db :state :stepping-over :prev-state state)
+  (when (and (= state :paused)
+             (or (nil? timestamp-ms)
+                 (> (- (js/Date.now) timestamp-ms) debounce-ms)))
+    {:db (-> db
+             (assoc :state :stepping-over :prev-state state)
+             (assoc-in [:timestamp-ms :step-over-instr] (js/Date.now)))
      :fx [[:dispatch [::handle-app-event]]]})))
 
 (re-frame/reg-fx
@@ -472,8 +506,8 @@
    (assoc db
           :diri db/default-diri
           :next-diri nil
-          :prev-state (or prev-state state)
-          :state :waiting)))
+          :state :waiting
+          :prev-state (or prev-state state))))
 
 (re-frame/reg-event-db
  ::stop-app

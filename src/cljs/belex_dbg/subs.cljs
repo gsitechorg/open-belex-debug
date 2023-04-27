@@ -240,3 +240,18 @@
  ::loading-files?
  (fn [db _]
    (seq (:loading-files db))))
+
+(re-frame/reg-sub
+ ::terminated?
+ (fn [{:keys [state]} _]
+   (= state :terminated)))
+
+(re-frame/reg-sub
+ ::stopped?
+ (fn [{:keys [state]} _]
+   (= state :stopped)))
+
+(re-frame/reg-sub
+ ::waiting?
+ (fn [{:keys [state]} _]
+   (some #{state} [:waiting :stepping-over :playing])))

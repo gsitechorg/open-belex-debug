@@ -15,8 +15,9 @@
    :toggle-active? {}
    :active-toggles []
    :terminal (js/Terminal. #js {:convertEol true})
-   :prev-state nil
-   :state :paused
+   :prev-state :paused
+   :state :waiting
    :event-buffer #queue []
    :socket-state :ready
-   :in-instruction? false})
+   :timestamp-ms {}
+   :debounce-ms {}})
