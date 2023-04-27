@@ -149,7 +149,7 @@
      (range NUM_L1_ROWS))
     (ndarray [NUM_L2_ROWS NUM_L2_PLATS] false)
     (ndarray [NUM_LGL_PLATS] false)
-    (ndarray [NUM_SECTIONS NUM_PLATS_PER_APUC] false))))
+    (ndarray [NUM_SECTIONS NUM_PLATS_PER_APUC] true))))
 
 (defrecord DIRI [seu-layer apuc-rsp-fifo apuc])
 
