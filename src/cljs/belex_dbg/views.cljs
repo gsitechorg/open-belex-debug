@@ -5,6 +5,7 @@
    [reagent.dom :as rdom]
    [re-frame.core :as re-frame]
    [re-com.core :as re-com :refer [at]]
+   ["bootstrap" :as bootstrap]
    [breaking-point.core :as bp]
    [belex-dbg.diri :as belex]
    [belex-dbg.events :as events]
@@ -1353,7 +1354,7 @@
       (doseq [el (.querySelectorAll
                   (rdom/dom-node this)
                   "[data-bs-toggle='tooltip']")]
-        (js/bootstrap.Tooltip. el)))
+        (bootstrap/Tooltip. el)))
     :reagent-render
     (fn [& {:keys [btn-id
                    btn-class

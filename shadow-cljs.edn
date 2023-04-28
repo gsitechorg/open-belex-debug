@@ -55,7 +55,10 @@
       :file "resources/public/vendor/js/rxjs.umd.js"}
      "xterm"
      {:target :global
-      :global "Terminal"}}}
+      :global "Terminal"}
+     "bootstrap"
+     {:target :file
+      :file "resources/public/vendor/js/bootstrap.bundle.js"}}}
    :modules
    {:app {:init-fn belex-dbg.core/init}}
    :compiler-options
