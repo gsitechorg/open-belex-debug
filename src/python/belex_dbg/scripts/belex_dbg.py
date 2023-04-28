@@ -90,7 +90,9 @@ def belex_dbg(**kwargs) -> None:
                        use_reloader=False)
 
     if kwargs["open_window"]:
-        root_dir = Path(__file__).parent / "../../../.."
+        root_dir = Path(__file__).parent
+        while not (root_dir / "node_modules" / ".bin" / "electron").exists():
+            root_dir = root_dir.parent
         electron = root_dir / "node_modules" / ".bin" / "electron"
         client = subprocess.Popen([electron, root_dir,
                                    "--host", host,

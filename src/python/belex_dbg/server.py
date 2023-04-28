@@ -38,7 +38,9 @@ from belex.common.types import Integer
 
 LOGGER = logging.getLogger()
 
-root_dir = Path(__file__).parent / "../../.."
+root_dir = Path(__file__).parent
+while not (root_dir / "resources" / "public").exists():
+    root_dir = root_dir.parent
 static_folder = root_dir / "resources" / "public"
 
 app = Flask(__name__,
