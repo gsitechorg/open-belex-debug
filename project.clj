@@ -1,4 +1,4 @@
-(defproject belex-debug "1.0rc8"
+(defproject belex-debug "1.0.0"
 
   :description "Belex debugger"
   :url "https://bitbucket.org/gsitech/belex-debug"
