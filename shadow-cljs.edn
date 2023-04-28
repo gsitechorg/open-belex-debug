@@ -38,7 +38,7 @@
    :output-to "resources/compiled/main.js"
    :main belex-dbg.electron/main}
   :browser
-  {:target     :browser
+  {:target :browser
    :output-dir "resources/public/js/compiled"
    :asset-path "/js/compiled"
    ;; see: https://github.com/thheller/shadow-cljs/issues/1031#issuecomment-1184192574
@@ -46,12 +46,21 @@
    {:resolve
     {"highlight.js"
      {:target :npm
-      :require "highlight.js/lib/core"}}}
+      :require "highlight.js/lib/core"}
+     "socket.io"
+     {:target :file
+      :file "resources/public/vendor/js/socket.io.js"}
+     "rxjs"
+     {:target :file
+      :file "resources/public/vendor/js/rxjs.umd.js"}
+     "xterm"
+     {:target :global
+      :global "Terminal"}}}
    :modules
    {:app {:init-fn belex-dbg.core/init}}
-   ;; :compiler-options
-   ;; {:closure-defines
-   ;;  { belex-dbg.config/version :shadow-git-inject/version}}
+   :compiler-options
+   {:closure-defines
+    {belex-dbg.config/version :shadow-git-inject/version}}
    :devtools
    {:preloads [#_day8.re-frame-10x.preload]}
    :dev

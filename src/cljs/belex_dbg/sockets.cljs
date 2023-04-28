@@ -1,12 +1,14 @@
 (ns belex-dbg.sockets
   (:require
-   [cognitect.transit :as t]))
+   [cognitect.transit :as t]
+   ["socket.io" :as socket-io]
+   ["rxjs" :as rxjs]))
 
 (def socket (atom nil))
 
-(def app-events (js/rxjs.Subject.))
+(def app-events (rxjs/Subject.))
 
-(def file-loads (js/rxjs.Subject.))
+(def file-loads (rxjs/Subject.))
 
 (defn subscribe-to-app-event [handler]
   (.subscribe app-events #js {:next handler}))
@@ -49,7 +51,7 @@
 (defn start! []
   (when-not @socket
     (println "Connecting to debug server.")
-    (reset! socket (js/io #js {:autoConnect false}))
+    (reset! socket (socket-io/io #js {:autoConnect false}))
     (.on @socket "disconnect" stop!)
     (.on @socket "app_event" handle-app-event)
     (.on @socket "file_load" handle-file-load)
