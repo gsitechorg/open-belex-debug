@@ -3,8 +3,6 @@
    [electron :refer [app BrowserWindow crashReporter]]
    [commander :refer [Command]]))
 
-(def main-window (atom nil))
-
 (defn opts->url [opts]
   (let [host (if (= opts.host "0.0.0.0")
                "localhost"
@@ -13,14 +11,12 @@
     (str "http://" host ":" port)))
 
 (defn init-browser [_ opts]
-  (reset! main-window
-          (BrowserWindow.
-           #js {:show false
-                :autoHideMenuBar true}))
-  (.maximize @main-window)
-  (.show @main-window)
-  (.loadURL @main-window (opts->url opts))
-  (.on @main-window "closed" #(reset! main-window nil)))
+  (let [main-window (BrowserWindow.
+                     #js {:show false
+                          :autoHideMenuBar true})]
+    (.maximize main-window)
+    (.show main-window)
+    (.loadURL main-window (opts->url opts))))
 
 (def program
   (.. (Command.)
