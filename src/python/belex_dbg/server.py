@@ -39,9 +39,13 @@ from belex.common.types import Integer
 LOGGER = logging.getLogger()
 
 root_dir = Path(__file__).parent
-while not (root_dir / "resources" / "public").exists():
+while not (root_dir / "resources" / "public").exists() \
+      and (root_dir.parent != root_dir):
     root_dir = root_dir.parent
+
 static_folder = root_dir / "resources" / "public"
+if not static_folder.exists():
+    raise RuntimeError("Cannot find resources folder")
 
 app = Flask(__name__,
             static_url_path="",
