@@ -1,6 +1,6 @@
 (ns belex-dbg.sockets
   (:require
-   [cognitect.transit :as t]
+   ["@msgpack/msgpack" :as msgpack]
    ["socket.io" :as socket-io]
    ["rxjs" :as rxjs]))
 
@@ -24,16 +24,15 @@
   (when @socket
     (.emit @socket "restart")))
 
-(defn transit->json [transit-data]
-  (let [reader (t/reader :json)]
-    (t/read reader transit-data)))
+(defn msgpack->clj [data]
+  (msgpack/decode data))
 
-(defn handle-app-event [transit-event]
-  (let [event (transit->json transit-event)]
+(defn handle-app-event [data]
+  (let [event (msgpack->clj data)]
     (.next app-events event)))
 
-(defn handle-file-load [payload]
-  (.next file-loads (transit->json payload)))
+(defn handle-file-load [data]
+  (.next file-loads (msgpack->clj data)))
 
 (defn load-file-source [file-path]
   (when @socket

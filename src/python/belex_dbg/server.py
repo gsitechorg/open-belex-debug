@@ -8,7 +8,6 @@ r"""
 """
 
 import logging
-from io import StringIO
 from pathlib import Path
 from queue import Queue
 from signal import SIGTERM, pthread_kill
@@ -24,7 +23,8 @@ from pygments.formatters import HtmlFormatter
 from flask import Flask, request, send_from_directory
 from flask_socketio import SocketIO, disconnect, emit
 
-from transit.writer import Writer as TransitWriter
+
+import msgpack
 
 from belex.bleir.interpreters import BLEIRInterpreter
 from belex.bleir.types import (CallerMetadata, Fragment, FragmentCallerCall,
@@ -153,15 +153,6 @@ def handle_restart() -> None:
         running_condition.notify_all()
 
 
-def jsonify_bool_list(xss: Sequence[Union[Sequence[bool], bool]]) \
-        -> Sequence[Union[Sequence[bool], bool]]:
-    if xss.ndim == 1:
-        xs = xss
-        return [bool(x) for x in xs]
-    else:
-        return [jsonify_bool_list(xs) for xs in xss]
-
-
 def jsonify_int_list(xss: Sequence[Union[Sequence[Integer], Integer]]) \
         -> Sequence[Union[Sequence[int], int]]:
     if np.ndim(xss) == 1:
@@ -192,22 +183,19 @@ def jsonify_event(event: Sequence[Any]) -> Sequence[Any]:
         if is_bleir(component):
             json.append(jsonify_bleir(component))
         elif isinstance(component, np.ndarray):
-            json.append(jsonify_bool_list(component))
+            json.append(component.tolist())
         elif isinstance(component, list):
             json.append(jsonify_int_list(component))
         elif isinstance(component, RspFifoMsg):
             json.append([int(component.rsp32k),
-                         jsonify_int_list(component.rsp2k)])
+                         component.rsp2k.tolist()])
         else:
             json.append(component)
     return json
 
 
 def emit_json(event_nym: str, event_json: Any) -> None:
-    io = StringIO()
-    writer = TransitWriter(io, "json")
-    writer.write(event_json)
-    data = io.getvalue()
+    data = msgpack.packb(event_json)
     emit(event_nym, data, broadcast=True)
 
 

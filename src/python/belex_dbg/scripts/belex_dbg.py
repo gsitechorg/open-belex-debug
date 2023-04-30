@@ -97,7 +97,7 @@ def belex_dbg(**kwargs) -> None:
 
         electron = root_dir / "node_modules" / ".bin" / "electron"
         if not electron.exists():
-            raise RuntimeError("Cannot find resources folder")
+            raise RuntimeError("Cannot find electron")
 
         client = subprocess.Popen([electron, root_dir,
                                    "--host", host,
