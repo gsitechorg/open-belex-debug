@@ -1185,14 +1185,6 @@
         [re-com/gap
          :size "1"]]]])))
 
-(defn reg-panel
-  ([fmt pad-size reg-key reg-pfx reg-id]
-   (let [reg-val (re-frame/subscribe [reg-key reg-id])
-         fmt-fn (condp = fmt :hex fmt-hex :dec fmt-dec)]
-     [:tr
-      [:th.code.text-end {:scope "row"} (str reg-pfx reg-id)]
-      [:td.code.text-start (fmt-fn @reg-val pad-size)]])))
-
 (defn accordion-panel
   ([& {:keys [accordion-id
               accordion-pfx
@@ -1219,6 +1211,59 @@
         :aria-labelledby heading-id
         :data-bs-parent (str "#" accordion-id)}
        content]])))
+
+(defn param->fmt [param-kind]
+  (condp = param-kind
+    "Mask" fmt-hex
+    "RE" fmt-hex
+    "EWE" fmt-hex
+    #_:else fmt-dec))
+
+(defn param->pad [param-kind]
+  (condp = param-kind
+    "Mask" 4
+    "RE" 6
+    "EWE" 3
+    #_:else 0))
+
+(defn param-panel
+  ([[param-nym param-kind param-val]]
+   (let [fmt-fn (param->fmt param-kind)
+         pad-size (param->pad param-kind)]
+     [:tr
+      [:th.code.text-end {:scope "row"} param-nym]
+      [:td.code.text-start (fmt-fn param-val pad-size)]])))
+
+(defn params-panel
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
+   (let [parameters @(re-frame/subscribe [::subs/parameters])
+         accordion-pfx "parameters"]
+     (accordion-panel
+      :accordion-id accordion-id
+      :accordion-pfx accordion-pfx
+      :begin-expanded begin-expanded
+      :title "Parameters"
+      :content
+      [:table
+       {:class ["table"
+                "table-bordered"
+                "table-hover"
+                "accordion-body"
+                "no-bottom-margin"
+                "table-fixed"]}
+       (into
+        [:tbody]
+        (mapv param-panel parameters))]))))
+
+(defn reg-panel
+  ([fmt pad-size reg-key reg-pfx reg-id]
+   (let [reg-val (re-frame/subscribe [reg-key reg-id])
+         fmt-fn (condp = fmt :hex fmt-hex :dec fmt-dec)]
+     [:tr
+      [:th.code.text-end {:scope "row"} (str reg-pfx reg-id)]
+      [:td.code.text-start (fmt-fn @reg-val pad-size)]])))
 
 (defn regs-panel
   ([& {:keys [accordion-id
@@ -1252,64 +1297,81 @@
               (range num-regs)))]))))
 
 (defn sm-regs-panel
-  ([accordion-id]
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
    (regs-panel
     :accordion-id accordion-id
     :title "SM_REGS"
     :reg-key ::subs/sm-reg
     :reg-pfx "SM_REG_"
     :num-regs belex/NUM_SM_REGS
-    :begin-expanded true)))
+    :begin-expanded begin-expanded)))
 
 (defn rn-regs-panel
-  ([accordion-id]
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
    (regs-panel
     :accordion-id accordion-id
     :title "RN_REGS"
     :reg-key ::subs/rn-reg
     :reg-pfx "RN_REG_"
     :num-regs belex/NUM_RN_REGS
-    :fmt :dec)))
+    :fmt :dec
+    :begin-expanded begin-expanded)))
 
 (defn re-regs-panel
-  ([accordion-id]
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
    (regs-panel
     :accordion-id accordion-id
     :title "RE_REGS"
     :reg-key ::subs/re-reg
     :reg-pfx "RE_REG_"
     :num-regs belex/NUM_RE_REGS
-    :pad-size 6)))
+    :pad-size 6
+    :begin-expanded begin-expanded)))
 
 (defn ewe-regs-panel
-  ([accordion-id]
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
    (regs-panel
     :accordion-id accordion-id
     :title "EWE_REGS"
     :reg-key ::subs/ewe-reg
     :reg-pfx "EWE_REG_"
     :num-regs belex/NUM_EWE_REGS
-    :pad-size 3)))
+    :pad-size 3
+    :begin-expanded begin-expanded)))
 
 (defn l1-regs-panel
-  ([accordion-id]
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
    (regs-panel
     :accordion-id accordion-id
     :title "L1_REGS"
     :reg-key ::subs/l1-reg
     :reg-pfx "L1_ADDR_REG_"
     :num-regs belex/NUM_L1_REGS
-    :fmt :dec)))
+    :fmt :dec
+    :begin-expanded begin-expanded)))
 
 (defn l2-regs-panel
-  ([accordion-id]
+  ([accordion-id
+    & {:keys [begin-expanded]
+       :or {begin-expanded false}}]
    (regs-panel
     :accordion-id accordion-id
     :title "L2_REGS"
     :reg-key ::subs/l2-reg
     :reg-pfx "L2_ADDR_REG_"
     :num-regs belex/NUM_L2_REGS
-    :fmt :dec)))
+    :fmt :dec
+    :begin-expanded begin-expanded)))
 
 (defn seu-layer-panel
   ([]
@@ -1321,7 +1383,9 @@
       [re-regs-panel accordion-id]
       [ewe-regs-panel accordion-id]
       [l1-regs-panel accordion-id]
-      [l2-regs-panel accordion-id]])))
+      [l2-regs-panel accordion-id]
+      [params-panel accordion-id
+       :begin-expanded true]])))
 
 (defn register-panel
   ([]

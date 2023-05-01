@@ -184,7 +184,8 @@ def jsonify_event(event: Sequence[Any]) -> Sequence[Any]:
             json.append(jsonify_bleir(component))
         elif isinstance(component, np.ndarray):
             json.append(component.tolist())
-        elif isinstance(component, list):
+        elif isinstance(component, list) \
+             and not event[0].endswith("::enter"):
             json.append(jsonify_int_list(component))
         elif isinstance(component, RspFifoMsg):
             json.append([int(component.rsp32k),

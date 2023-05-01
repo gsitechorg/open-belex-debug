@@ -255,3 +255,8 @@
  ::waiting?
  (fn [{:keys [state]} _]
    (some #{state} [:waiting :stepping-over :playing])))
+
+(re-frame/reg-sub
+ ::parameters
+ (fn [{:keys [parameters]} _]
+   parameters))

@@ -20,4 +20,5 @@
    :event-buffer #queue []
    :socket-state :ready
    :timestamp-ms {}
-   :debounce-ms {}})
+   :debounce-ms {}
+   :parameters []})

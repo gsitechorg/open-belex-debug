@@ -78,52 +78,59 @@
      {:db (assoc db :socket-state :pending)
       :fx [[::poll-app-event-fx]]})))
 
-(defmulti app-event-handler first)
+(re-frame/reg-event-db
+ ::update-parameters
+ (fn;-traced
+   [db [_ parameters]]
+   (assoc db :parameters parameters)))
 
-(defmethod app-event-handler "stdout" [[_ line]]
-  [::write-line line])
+(defmulti handle-app-event first)
 
-(defmethod app-event-handler "stderr" [[_ line]]
-  [::write-line line])
+(defmethod handle-app-event "stdout" [[_ line]]
+  [[:dispatch [::write-line line]]])
 
-(defmethod app-event-handler "fragment::enter"
+(defmethod handle-app-event "stderr" [[_ line]]
+  [[:dispatch [::write-line line]]])
+
+(defmethod handle-app-event "fragment::enter"
+  [[_ [file-path line-number parameters]]]
+  [[:dispatch [::load-file file-path line-number]]
+   [:dispatch [::update-parameters parameters]]])
+
+(defmethod handle-app-event "multi_statement::enter"
   [[_ [file-path line-number]]]
-  [::load-file file-path line-number])
+  [[:dispatch [::load-file file-path line-number]]])
 
-(defmethod app-event-handler "multi_statement::enter"
+(defmethod handle-app-event "statement::enter"
   [[_ [file-path line-number]]]
-  [::load-file file-path line-number])
+  [[:dispatch [::load-file file-path line-number]]])
 
-(defmethod app-event-handler "statement::enter"
-  [[_ [file-path line-number]]]
-  [::load-file file-path line-number])
+(defmethod handle-app-event "app::start" [_]
+  [[:dispatch [::start-app]]])
 
-(defmethod app-event-handler "app::start" [_]
-  [::start-app])
+(defmethod handle-app-event "app::stop" [_]
+  [[:dispatch [::stop-app]]])
 
-(defmethod app-event-handler "app::stop" [_]
-  [::stop-app])
-
-(defmethod app-event-handler :default [event]
-  [::update-diri event])
+(defmethod handle-app-event :default [event]
+  [[:dispatch [::update-diri event]]])
 
 (re-frame/reg-event-fx
  ::pop-app-event
  (fn;-traced
-  [{:keys [db]
-    {:keys [event-buffer state prev-state]} :db}
-   _]
-  (when-let [event (peek event-buffer)]
-    (cond-> {:db (assoc db :event-buffer (pop event-buffer))
-             :fx [[:dispatch (app-event-handler event)]]}
-      (and (file-load-event? event)
-           (some #{state} [:waiting :stepping-over]))
-      (update :db assoc :state prev-state :prev-state nil)
-      (or (not (file-load-event? event))
-          (some #{:playing} [state prev-state]))
-      (update :fx conj [:dispatch [::handle-app-event]])
-      :true
-      (update :fx conj [:dispatch [::poll-app-event]])))))
+   [{:keys [db]
+     {:keys [event-buffer state prev-state]} :db}
+    _]
+   (when-let [event (peek event-buffer)]
+     (cond-> {:db (assoc db :event-buffer (pop event-buffer))
+              :fx (handle-app-event event)}
+       (and (file-load-event? event)
+            (some #{state} [:waiting :stepping-over]))
+       (update :db assoc :state prev-state :prev-state nil)
+       (or (not (file-load-event? event))
+           (some #{:playing} [state prev-state]))
+       (update :fx conj [:dispatch [::handle-app-event]])
+       :true
+       (update :fx conj [:dispatch [::poll-app-event]])))))
 
 (re-frame/reg-event-fx
  ::handle-app-event
