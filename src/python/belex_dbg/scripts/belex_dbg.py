@@ -107,7 +107,7 @@ def belex_dbg(**kwargs) -> None:
               f"http://{kwargs['host']}:{kwargs['port']}")
 
     debug_server.script_spec = \
-        spec_from_file_location("belex_script", kwargs["belex_script"])
+        spec_from_file_location("__main__", kwargs["belex_script"])
     debug_server.script_module = module_from_spec(debug_server.script_spec)
 
     if kwargs["capture_output"]:
