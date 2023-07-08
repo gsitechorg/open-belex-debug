@@ -3,5 +3,5 @@ channels:
   - conda-forge
   - gsi
 dependencies:
-  - belex=1.0rc9
+  - belex=1.0rc10
   - numpy=1.24.2
