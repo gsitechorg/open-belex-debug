@@ -104,8 +104,8 @@
 
 (defn rd-rsp2k-reg [apc-rsp-fifo bank-id]
   (let [rsp-fifo-msg (apc-rsp-head apc-rsp-fifo)
-        lower-half-bank (* 2 bank-id)
-        upper-half-bank (inc lower-half-bank)
+        lower-half-bank bank-id
+        upper-half-bank lower-half-bank + 4
         rsp2k (:rsp2k rsp-fifo-msg)
         lower-val (nth rsp2k lower-half-bank)
         upper-val (nth rsp2k upper-half-bank)]
