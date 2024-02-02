@@ -26,15 +26,15 @@ from flask_socketio import SocketIO, disconnect, emit
 
 import msgpack
 
-from belex.bleir.interpreters import BLEIRInterpreter
-from belex.bleir.types import (CallerMetadata, Fragment, FragmentCallerCall,
-                               FragmentMetadata, StatementMetadata)
-from belex.bleir.walkables import is_bleir
-from belex.diri.half_bank import DIRI
-from belex.common.rsp_fifo import ApucRspFifo
-from belex.common.rsp_fifo import RspFifoMsg
-from belex.common.seu_layer import SEULayer
-from belex.common.types import Integer
+from open_belex.bleir.interpreters import BLEIRInterpreter
+from open_belex.bleir.types import (CallerMetadata, Fragment, FragmentCallerCall,
+                                    FragmentMetadata, StatementMetadata)
+from open_belex.bleir.walkables import is_bleir
+from open_belex.diri.half_bank import DIRI
+from open_belex.common.rsp_fifo import ApucRspFifo
+from open_belex.common.rsp_fifo import RspFifoMsg
+from open_belex.common.seu_layer import SEULayer
+from open_belex.common.types import Integer
 
 LOGGER = logging.getLogger()
 

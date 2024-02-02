@@ -18,9 +18,9 @@ from typing import Optional, Sequence
 
 import click
 
-from belex.utils.log_utils import LogLevel, init_logger
-from belex.utils.script_utils import (collect_config, collect_log_level,
-                                      optimizations_by_level)
+from open_belex.utils.log_utils import LogLevel, init_logger
+from open_belex.utils.script_utils import (collect_config, collect_log_level,
+                                           optimizations_by_level)
 
 import belex_dbg.server as debug_server
 from belex_dbg.io import StderrEventIO, StdoutEventIO
